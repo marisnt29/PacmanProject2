@@ -447,6 +447,8 @@ class AStarCornersAgent(SearchAgent):
         self.searchFunction = lambda prob: search.aStarSearch(prob, cornersHeuristic)
         self.searchType = CornersProblem
 
+
+
 class FoodSearchProblem:
     """
     A search problem associated with finding the a path that collects all of the
@@ -462,6 +464,7 @@ class FoodSearchProblem:
         self.startingGameState = startingGameState
         self._expanded = 0 # DO NOT CHANGE
         self.heuristicInfo = {} # A dictionary for the heuristic to store information
+
 
     def getStartState(self):
         return self.start
@@ -593,6 +596,8 @@ def foodHeuristic(state, problem):
     return heuristic
 
 
+
+
 class ClosestDotSearchAgent(SearchAgent):
     "Search for all food using a sequence of searches"
     def registerInitialState(self, state):
@@ -677,3 +682,204 @@ def mazeDistance(point1, point2, gameState):
     assert not walls[x2][y2], 'point2 is a wall: ' + str(point2)
     prob = PositionSearchProblem(gameState, start=point1, goal=point2, warn=False, visualize=False)
     return len(search.bfs(prob))
+
+
+
+class AStarKeyDoorFoodSearchAgent(SearchAgent):
+    "A SearchAgent for FoodSearchProblem using A* and your foodHeuristic"
+    def __init__(self):
+        self.searchFunction = lambda prob: search.aStarSearch(prob, keyDoorFoodHeuristic)
+        self.searchType = KeyDoorFoodSearchProblem
+
+
+class KeyDoorFoodSearchProblem:
+    """
+    A search problem associated with finding the a path that collects all of the
+    food (dots) in a Pacman game ,but before it has to find the keys to unlock all doors
+
+    A search state in this problem is a tuple ( pacmanPosition, foodGrid ) where
+      pacmanPosition: a tuple (x,y) of integers specifying Pacman's position
+
+    """
+    def __init__(self, startingGameState):
+        self.start = (startingGameState.getPacmanPosition(),startingGameState.getFood(),startingGameState.getDoors(),startingGameState.getKeys())
+        self.food = startingGameState.getFood()
+        self.doors =startingGameState.getDoors()
+        self.keys = startingGameState.getKeys()
+        self.walls = startingGameState.getWalls()
+        self.flag = startingGameState.getFlag()
+        self.startingGameState = startingGameState
+        self._expanded = 0 # DO NOT CHANGE
+        self.heuristicInfo = {} # A dictionary for the heuristic to store information
+
+    def getStartState(self):
+        return self.start
+
+    def isGoalState(self, state):
+        return state[1].count() == 0 
+
+    def getSuccessors(self, state):
+        "Returns successor states, the actions they require, and a cost of 1."
+        successors = []
+        self._expanded += 1 # DO NOT CHANGE
+        for direction in [Directions.NORTH, Directions.SOUTH, Directions.EAST, Directions.WEST]:
+            x,y = state[0]
+            dx, dy = Actions.directionToVector(direction)
+            nextx, nexty = int(x + dx), int(y + dy)
+            if self.keys.count() >0:
+                nextKey = state[3].copy()
+                nextKey[nextx][nexty] = False
+                if self.flag:
+                    if not self.walls[nextx][nexty]:
+                        successors.append( ( ((nextx, nexty),nextKey, direction, 1)))
+                if not self.flag:
+                    if not self.walls[nextx][nexty] and not self.doors[nextx][nexty]:
+                        successors.append((((nextx, nexty), nextKey), direction, 1))
+            elif self.doors.count() >0:
+                nextDoor = state[2].copy()
+                nextDoor[nextx][nexty] = False
+                if self.flag:
+                    if not self.walls[nextx][nexty]:
+                        successors.append(((nextx, nexty), nextDoor, direction, 1))
+                if not self.flag:
+                    if not self.walls[nextx][nexty] and not self.doors[nextx][nexty]:
+                        successors.append((((nextx, nexty), nextDoor), direction, 1))
+            elif self.food.count() >0:
+                nextFood = state[2].copy()
+                nextFood[nextx][nexty] = False
+                if self.flag:
+                    if not self.walls[nextx][nexty]:
+                        successors.append(((nextx, nexty), nextFood, direction, 1))
+                if not self.flag:
+                    if not self.walls[nextx][nexty] and not self.doors[nextx][nexty]:
+                        successors.append((((nextx, nexty), nextFood), direction, 1))
+
+
+        return successors
+
+    def getCostOfActions(self, actions):
+        """Returns the cost of a particular sequence of actions.  If those actions
+        include an illegal move, return 999999"""
+        x,y= self.getStartState()[0]
+        cost = 0
+        for action in actions:
+            # figure out the next state and see whether it's legal
+            dx, dy = Actions.directionToVector(action)
+            x, y = int(x + dx), int(y + dy)
+            if self.walls[x][y]:
+                return 999999
+            cost += 1
+        return cost
+
+def keyDoorFoodHeuristic(state, problem):
+
+    position, foodGrid, doorGrid, keyGrid, flag = state
+
+
+
+
+    # "nonvisited" contains the coordinates of food locations which have not yet been visited
+    nonvisitedFood = foodGrid.asList()
+    nonvisitedDoors = doorGrid.asList()
+    nonvisitedKeys = keyGrid.asList()
+
+    # "currentpos" contains Pacman's current position
+    currentpos = state[0]
+
+    # "distances" is for storing the Manhattan distance between current position and each food location
+    distancesFood = []
+    distancesKey = []
+    distancesDoor = []
+
+    heuristic = 0
+
+    # if there is no food left, the function returns 0
+    if len(nonvisitedFood) == 0:
+        return heuristic
+
+    # loop to calculate Manhattan distance between current position and each food location
+    for elem in nonvisitedKeys:
+        dist = abs(elem[0] - currentpos[0]) + abs(elem[1] - currentpos[1])
+        distancesKey.append((dist,elem))
+
+    for elem in nonvisitedDoors:
+        dist = abs(elem[0] - currentpos[0]) + abs(elem[1] - currentpos[1])
+        distancesDoor.append((dist,elem))
+
+    for elem in nonvisitedFood:
+        dist = abs(elem[0] - currentpos[0]) + abs(elem[1] - currentpos[1])
+        distancesFood.append((dist,elem))
+    # distances are sorted in ascending order
+    distancesKey = sorted(distancesKey)
+    distancesDoor = sorted(distancesDoor)
+    distancesFood = sorted(distancesFood)
+
+    # the Manhattan distance between the current position and closest item location
+    if len(nonvisitedKeys) >0:
+        heuristic = heuristic + distancesKey[0][0]
+    elif len(nonvisitedDoors) >0:
+        heuristic = heuristic + distancesDoor[0][0]
+    elif len(nonvisitedFood) >0:
+        heuristic = heuristic + distancesFood[0][0]
+
+    # current position is changed to the position of closest item
+    closest_key = distancesKey[0][1]
+    closest_door = distancesDoor[0][1]
+    closest_food = distancesFood[0][1]
+
+    # remove closest food from nonvisited list
+    if len(nonvisitedKeys) > 0:
+        nonvisitedKeys = list(nonvisitedKeys)
+        for elem in nonvisitedKeys:
+            if elem == closest_key:
+                 nonvisitedKeys.pop(nonvisitedKeys.index(elem))
+        nonvisitedKeys = tuple(nonvisitedKeys)
+    elif len(nonvisitedDoors) > 0:
+        nonvisitedDoors = list(nonvisitedDoors)
+        for elem in nonvisitedDoors:
+            if elem == closest_door:
+                nonvisitedDoors.pop(nonvisitedDoors.index(elem))
+        nonvisitedDoors = tuple(nonvisitedDoors)
+    elif len(nonvisitedFood) > 0:
+        nonvisitedFood = list(nonvisitedFood)
+        for elem in nonvisitedFood:
+            if elem == closest_food:
+                nonvisitedFood.pop(nonvisitedFood.index(elem))
+        nonvisitedFood = tuple(nonvisitedFood)
+
+    # if no more food is remaining, return heuristic
+    if len(nonvisitedFood) == 0:
+        return heuristic
+
+    # loop to calculate Manhattan distance between closest item and each remaining item location
+    distancesKey = []
+    for elem in nonvisitedKeys:
+        dist = abs(elem[0] - closest_key[0]) + abs(elem[1] - closest_key[1])
+        distancesKey.append((dist, elem))
+    # distances are sorted in descending order
+    distancesKey = sorted(distancesKey, reverse=True)
+
+    distancesDoor = []
+    for elem in nonvisitedDoors:
+        dist = abs(elem[0] - closest_food[0]) + abs(elem[1] - closest_food[1])
+        distancesDoor.append((dist, elem))
+    # distances are sorted in descending order
+    distancesDoor = sorted(distancesDoor, reverse=True)
+
+    distancesFood = []
+    for elem in nonvisitedFood:
+        dist = abs(elem[0] - closest_food[0]) + abs(elem[1] - closest_food[1])
+        distancesFood.append((dist,elem))
+    # distances are sorted in descending order
+    distancesFood = sorted(distancesFood, reverse=True)
+
+    # the Manhattan distance between the closest food and the food farthest to it is added to the heuristic
+    if len(nonvisitedKeys) >0:
+        heuristic = heuristic + distancesKey[0][0]
+    elif len(nonvisitedDoors) >0:
+        heuristic = heuristic + distancesDoor[0][0]
+    elif len(nonvisitedFood) >0:
+        heuristic = heuristic + distancesFood[0][0]
+
+
+    return heuristic

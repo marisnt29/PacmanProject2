@@ -227,6 +227,9 @@ class GameState:
     def closeTheDoors(self):
         self.data.flag = False
 
+    def getFlag(self):
+        return self.data.flag
+
 
 
     def hasFood(self, x, y):
