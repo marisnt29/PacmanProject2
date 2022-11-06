@@ -28,18 +28,6 @@ python pacman.py -l mediumScaryMaze -p StayWestSearchAgent<br />
 Implemented A* graph search in the function aStarSearch in search.py. A* takes a heuristic function as an argument. Heuristics take two arguments: a state in the search problem (the main argument), and the problem itself (for reference information). The nullHeuristic heuristic function in `search.py` is a trivial example.<br />
 `python pacman.py -l bigMaze -z .5 -p SearchAgent -a fn=astar,heuristic=manhattanHeuristic `
 
-## Finding all the Corners
-Implemented the CornersProblem search problem in `searchAgents.py`. <br /><br />
-
-In corner mazes, there are four dots, one in each corner. The new search problem is to find the shortest path through the maze that touches all four corners (whether the maze actually has food there or not). Note that for some mazes like tinyCorners, the shortest path does not always go to the closest food first! <br />
-
-```
-python pacman.py -l tinyCorners -p SearchAgent -a fn=bfs,prob=CornersProblem<br />
-python pacman.py -l mediumCorners -p SearchAgent -a fn=bfs,prob=CornersProblem<br />
-```
-
-Implemented a heuristic for the CornersProblem in cornersHeuristic.<br />
-`python pacman.py -l mediumCorners -p AStarCornersAgent -z 0.5<br />`
 
 ## Eating All The Dots
 `python pacman.py -l testSearch -p AStarFoodSearchAgent<br />`
